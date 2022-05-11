@@ -113,7 +113,7 @@ class HoughLiner(Liner):
 
     def callback_itrpt(self, msg):
         self.cmd_idx = int(msg)
-        self.cmd_
+        self.busy_count = 5*self.fps
 
     def draw_lines(self, img, lines):
         for line in lines:
