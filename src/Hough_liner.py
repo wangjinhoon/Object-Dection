@@ -59,23 +59,13 @@ class HoughLiner(Liner):
             frame = self.draw_rectangle(frame)
 
             if self.lpos == self.width_offset:
-                # 0.7
                 if self.rpos > self.width * 0.70:
                     angle = 0
-                # elif self.rpos > self.width*0.5:
-                #    angle = -100*((self.width*0.75 - self.rpos)/self.width)
-                # elif self.rpos > self.width * 0.29:
-                #     angle = -60
                 else:
                     angle = -50
             elif self.rpos == self.width - self.width_offset:
-                # 0.3
                 if self.lpos < self.width * 0.30:
                     angle = 0
-                # elif self.lpos < self.width*0.5:
-                #    angle = 100*((self.lpos - self.width*0.25)/self.width)
-                # elif self.lpos < self.width * 0.72:
-                #     angle = 60
                 else:
                     angle = 50
             else:
