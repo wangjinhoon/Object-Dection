@@ -36,6 +36,7 @@ class HoughLiner(Liner):
         if self.stop_count > 0:
             self.stop_count -= 0
             self.controller.stop()
+            return
         elif self.ignore_count > 0:
             self.ignore_count -= 1
 
