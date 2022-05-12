@@ -81,6 +81,7 @@ class yolov3_trt(object):
         width, height, masks, anchors = parse_cfg_wh(self.cfg_file_path)
         self.engine_file_path = TRT
         self.show_img = True
+        self.stop_recognition = False
 
         # Two-dimensional tuple with the target network's (spatial) input resolution in HW ordered
         input_resolution_yolov3_WH = (width, height)
@@ -140,18 +141,65 @@ class yolov3_trt(object):
 
             # Run the post-processing algorithms on the TensorRT outputs and get the bounding box details of detected objects
             boxes, classes, scores = self.postprocessor.process(trt_outputs, shape_orig_WH)
+            maximum_size = 0
+            maxbox = []
+            maximum_name = -1
+            maxscore = 0
+            for ((top, right, bottom, left), cls, score) in zip(boxes, classes, scores ):
+                hh = bottom-top
+                ww = right-left
+                now = hh*ww
+
+                if maximum_size < now:
+                    maximum_size = now
+                    maximum_name = cls
+                    maxscore = score
+                    t,r,b,l = top, right, bottom, left
+            print(maximum_size)
+            if  self.stop_recognition:
+                if maximum_name == -1:
+                    self.stop_recognition = False
+            else:       
+                if maximum_name == 0 and maximum_size > 100: #left
+                    maxbox.append(t)
+                    maxbox.append(r)
+                    maxbox.append(b)
+                    maxbox.append(l)
+                    self.publisher(maxbox, maxscore, maximum_name)
+
+                elif maximum_name == 1 and maximum_size > 100: #right
+                    maxbox.append(t)
+                    maxbox.append(r)
+                    maxbox.append(b)
+                    maxbox.append(l)
+                    self.publisher(maxbox, maxscore, maximum_name)
+
+                elif maximum_name != 5 and maximum_size > 100: #stop
+                    maxbox.append(t)
+                    maxbox.append(r)
+                    maxbox.append(b)
+                    maxbox.append(l)
+                    self.stop_recognition = True
+                    self.publisher(maxbox, maxscore, maximum_name)
+
+                elif maximum_name == 5 and maximum_size > 100: #light
+                    maxbox.append(t)
+                    maxbox.append(r)
+                    maxbox.append(b)
+                    maxbox.append(l)
+                    self.publisher(maxbox, maxscore, maximum_name)
+
 
             latency = time.time() - start_time
             fps = 1 / latency
 
             #publish detected objects boxes and classes
-            self.publisher(boxes, scores, classes)
 
             # Draw the bounding boxes onto the original input image and save it as a PNG file
             # print(boxes, classes, scores)
             if self.show_img:
                 img_show = np.array(np.transpose(image[0], (1,2,0)) * 255, dtype=np.uint8)
-                obj_detected_img = draw_bboxes(Image.fromarray(img_show), boxes, scores, classes, ALL_CATEGORIES)
+                obj_detected_img = draw_bboxes(Image.fromarray(img_show), maxbox, maxscore, maximum_name, ALL_CATEGORIES)
                 obj_detected_img_np = np.array(obj_detected_img)
                 show_img = cv2.cvtColor(obj_detected_img_np, cv2.COLOR_RGB2BGR)
                 cv2.putText(show_img, "FPS:"+str(int(fps)), (10,50),cv2.FONT_HERSHEY_SIMPLEX, 1,(0,255,0),2,1)
