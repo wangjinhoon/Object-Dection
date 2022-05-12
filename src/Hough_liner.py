@@ -15,6 +15,10 @@ class HoughLiner(Liner):
     prev_angle = 0
     busy_count = 0
     cmd_idx = None
+    prev_lpos = None
+    prev_rpos = None
+    alpha = 0.5
+    state = 0
 
     def callback(self, msg):
         if self.busy_count:
@@ -22,6 +26,8 @@ class HoughLiner(Liner):
             assert self.cmd_idx, "command index cannot be None!"
             self.commands[self.cmd_idx](self)
             return
+
+        font = cv2.FONT_HERSHEY_SIMPLEX    
 
         frame = self.imgmsg2numpy(msg)
         self.width_offset = 0
@@ -42,7 +48,9 @@ class HoughLiner(Liner):
 
         gray = gray + np.uint8(self.target_b - curr_b)
 
-        ret, gray = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+        ret, gray = cv2.threshold(gray, 145, 255, cv2.THRESH_BINARY_INV)
+
+        #cv2.imshow('gray', gray)
         
         edge = cv2.Canny(np.uint8(gray), low_thres, high_thres)
         roi = edge[self.offset:self.offset + self.gap, 0 + self.width_offset:self.width - self.width_offset]
@@ -54,21 +62,69 @@ class HoughLiner(Liner):
             frame, self.lpos = self.get_line_pos(frame, left_lines, left=True)
             frame, self.rpos = self.get_line_pos(frame, right_lines, right=True)
 
+
             frame = self.draw_lines(frame, left_lines)
             frame = self.draw_lines(frame, right_lines)
             frame = self.draw_rectangle(frame)
 
+
+#             if not self.prev_lpos and self.lpos != self.width_offset:
+#                 self.prev_lpos = self.lpos
+#             elif not self.prev_lpos and self.lpos == self.width_offset:
+#                 pass
+#             elif self.lpos == self.width_offset:
+#                 pass
+#             else:
+#                 l_ab = abs(self.prev_lpos - self.lpos) 
+#                 if l_ab < 100:
+#                     self.prev_lpos = self.alpha * self.lpos + (1 - self.alpha) * self.prev_lpos
+#                     cv2.putText(frame, "l ab" +str(l_ab), (100, 100), font, 1, (255, 0, 0), 2)
+#                     print("normal")
+#                 else:
+#                     print("invalid pos")
+#                     self.prev_lpos = self.width_offset
+# # prev_lpos = 0, lpos = yes, no , yes -> prev=lpos, ab = prev-lpos
+
+
+#             if not self.prev_rpos and self.rpos != self.width - self.width_offset:
+#                 self.prev_rpos = self.rpos
+#             elif not self.prev_rpos and self.rpos == self.width - self.width_offset:
+#                 pass
+#             elif self.rpos == self.width:
+#                 pass
+#             else:
+#                 r_ab = abs(self.prev_rpos - self.rpos) 
+#                 if r_ab < 100:
+#                     print("normal")
+#                     self.prev_rpos = self.alpha * self.rpos + (1 - self.alpha) * self.prev_rpos
+#                     cv2.putText(frame, "r ab" + str(r_ab), (100, 200), font, 1, (255, 0, 0), 2)
+#                 else:
+#                     print("invalid pos")
+
+#                     self.prev_rpos = self.width - self.width_offset
+
+
             if self.lpos == self.width_offset:
-                if self.rpos > self.width * 0.5:
+                if self.rpos > self.width * 0.7:
                     angle = 0
                 else:
-                    angle = -40
+                    if self.state == 2:
+                        angle = 50
+                    else:
+                        angle = -40
+                        self.state = 1
+
             elif self.rpos == self.width - self.width_offset:
-                if self.lpos < self.width * 0.5:
+                if self.lpos < self.width * 0.3:
                     angle = 0
                 else:
-                    angle = 40
+                    if self.state == 1:
+                        angle = -50
+                    else:
+                        angle = 40
+                        self.state = 2
             else:
+                self.state = 0
                 center = (self.lpos + self.rpos) / 2
                 error = (center - self.width / 2)
                 if abs(self.lpos - self.rpos) < 135 or self.rpos < self.lpos:
@@ -88,13 +144,19 @@ class HoughLiner(Liner):
             self.controller.go(angle)
             # print("lpos: {}, rpos: {}".format(self.lpos, self.rpos))
         else:
-            self.controller.go(0)
+            if self.state == 0:
+                angle = 0
+            elif self.state == 1:
+                angle = -50
+            elif self.state == 2:
+                angle = 50
+
+        self.controller.go(angle)
            # exit()
 
-        font = cv2.FONT_HERSHEY_SIMPLEX
         # cv2.putText(frame, "angle " + str(angle), (50, 100), font, 1, (255, 0, 0), 2)
         # cv2.putText(frame, str(self.lpos) + ", " + str(self.rpos), (50, 440), font, 1, (255, 0, 0), 2)
-        # cv2.putText(frame, "mid " + str(mid), (440, 50), font, 1, (255, 0, 0), 2)
+        cv2.putText(frame, "state " + str(self.state), (440, 50), font, 1, (255, 0, 0), 2)
         cv2.imshow('frame', frame)
 
         if cv2.waitKey(10) == 27:
@@ -102,7 +164,8 @@ class HoughLiner(Liner):
             exit()
 
     def callback_itrpt(self, msg):
-        print(msg)
+        pass
+        #print(msg)
         # self.cmd_idx = int(msg)
         # self.busy_count = 5*self.fps
 
@@ -127,7 +190,7 @@ class HoughLiner(Liner):
 
     def divide_left_right(self, lines):
         low_grad_thres = 0
-        high_grad_thres = 10
+        high_grad_thres = 5
 
         filtered_lines = []
         left_lines = []
