@@ -1,36 +1,47 @@
 #!/usr/bin/env python
 
+from pickle import FALSE
 import rospy, random, cv2, math
 import numpy as np
+from collections import deque
 
 from liner import Liner
 
 
 class HoughLiner(Liner):
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    fps = 30.0
-    delay = round(1000 / fps)
-    out = cv2.VideoWriter('output.mp4', fourcc, fps, (640, 480))
+
+    fps = 15.0    
     target_b = 128
-    prev_angle = 0
+    prev_angles = deque()
+    q_len = 10
+    straight_thres = 10
+    pos_differ_thres = 400
     busy_count = 0
-    cmd_idx = None
-    prev_lpos = None
-    prev_rpos = None
-    alpha = 0.5
-    state = 0
     
 
-    def callback(self, msg):
-        if self.busy_count:
-            self.busy_count -= 1
-            assert self.cmd_idx is not None, "command index cannot be None!"
-            self.commands[self.cmd_idx](self)
-            return
-        else:
-            cmd_idx = None
+    cmd_idx = None
+    turn_signal= None
+    ready2turn = False
+    force_turn_count = 0
 
-        font = cv2.FONT_HERSHEY_SIMPLEX    
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    def callback(self, msg):
+        # if self.busy_count:
+        #     self.busy_count -= 1
+        #     assert self.cmd_idx is not None, "command index cannot be None!"
+        #     self.commands[self.cmd_idx](self)
+        #     return
+        # else:
+        #     self.cmd_idx = None
+
+        if self.force_turn_count > 0:
+            self.force_turn_count -= 1
+            if self.turn_signal == 0:
+                self.controller.go(-50)
+            else:
+                self.controller.go(50)
+            return
 
         frame = self.imgmsg2numpy(msg)
         self.width_offset = 0
@@ -46,6 +57,7 @@ class HoughLiner(Liner):
 
         low_thres = 60
         high_thres = 70
+
         roi = gray[self.offset:self.offset + self.gap, 0 + self.width_offset:self.width - self.width_offset]
         curr_b = np.mean(roi)
 
@@ -70,117 +82,91 @@ class HoughLiner(Liner):
             frame = self.draw_lines(frame, right_lines)
             frame = self.draw_rectangle(frame)
 
-
-#             if not self.prev_lpos and self.lpos != self.width_offset:
-#                 self.prev_lpos = self.lpos
-#             elif not self.prev_lpos and self.lpos == self.width_offset:
-#                 pass
-#             elif self.lpos == self.width_offset:
-#                 pass
-#             else:
-#                 l_ab = abs(self.prev_lpos - self.lpos) 
-#                 if l_ab < 100:
-#                     self.prev_lpos = self.alpha * self.lpos + (1 - self.alpha) * self.prev_lpos
-#                     cv2.putText(frame, "l ab" +str(l_ab), (100, 100), font, 1, (255, 0, 0), 2)
-#                     print("normal")
-#                 else:
-#                     print("invalid pos")
-#                     self.prev_lpos = self.width_offset
-# # prev_lpos = 0, lpos = yes, no , yes -> prev=lpos, ab = prev-lpos
-
-
-#             if not self.prev_rpos and self.rpos != self.width - self.width_offset:
-#                 self.prev_rpos = self.rpos
-#             elif not self.prev_rpos and self.rpos == self.width - self.width_offset:
-#                 pass
-#             elif self.rpos == self.width:
-#                 pass
-#             else:
-#                 r_ab = abs(self.prev_rpos - self.rpos) 
-#                 if r_ab < 100:
-#                     print("normal")
-#                     self.prev_rpos = self.alpha * self.rpos + (1 - self.alpha) * self.prev_rpos
-#                     cv2.putText(frame, "r ab" + str(r_ab), (100, 200), font, 1, (255, 0, 0), 2)
-#                 else:
-#                     print("invalid pos")
-
-#                     self.prev_rpos = self.width - self.width_offset
-
+            # if lpos not detected
             if self.lpos == self.width_offset:
                 if self.rpos > self.width * 0.7:
                     angle = 0
                 else:
-                    if self.state == 2:
-                        angle = 50
-                    else:
-                        angle = -40
-                        self.state = 1
-
+                    angle = -40
+            # if rpos not detected
             elif self.rpos == self.width - self.width_offset:
                 if self.lpos < self.width * 0.3:
                     angle = 0
                 else:
-                    if self.state == 1:
-                        angle = -50
-                    else:
-                        angle = 40
-                        self.state = 2
+                    angle = 40
+            # if both pos not detected
             else:
-                self.state = 0
                 center = (self.lpos + self.rpos) / 2
                 error = (center - self.width / 2)
                 if abs(self.lpos - self.rpos) < 135 or self.rpos < self.lpos:
-                    if self.prev_angle > 0:
+                    if self.prev_angles[-1] > 0:
                         angle = 40
-                    elif self.prev_angle < 0:
+                    elif self.prev_angles[-1] < 0:
                         angle = -40
                     else:
                         angle = 0
                 else:
-                    print(error)
-                    
                     angle = self.pid.pid_control(error) * 1
-                
-                       
-            self.prev_angle = angle
-            self.controller.go(angle)
+            
+            # if noise occur while on the curve, keep direction (filltering)
+            if (self.turn_signal == 0 and angle > self.straight_thres) or (self.turn_signal == 1 and angle < -self.straight_thres):
+                angle = 0
+                self.force_turn()
+
+            # pop oldest prev_angle
+            if len(self.prev_angles) >= self.q_len:
+                self.prev_angles.popleft()
+
+            # push current angle
+            self.prev_angles.append(angle)
+
+
+            if self.ready2turn:
+                if self.lpos != self.width_offset and self.rpos != self.width - self.width_offset and self.rpos - self.lpos > self.pos_differ_thres:
+                    self.force_turn()
+            else:
+                # check straight
+                avg_angle = abs(sum(self.prev_angles)/self.q_len)
+                if avg_angle < self.straight_thres:
+                    self.turn_signal = None
+
             # print("lpos: {}, rpos: {}".format(self.lpos, self.rpos))
         else:
-            if self.state == 0:
-                angle = 0
-            elif self.state == 1:
+            if self.turn_signal == 0:
                 angle = -50
-            elif self.state == 2:
+            elif self.turn_signal == 1:
                 angle = 50
+            else:
+                angle = 0
 
+        # steering
         self.controller.go(angle)
-           # exit()
-        self.prev_lpos = self.lpos
-        self.prev_rpos = self.rpos
+
+
+        # for Debug
+
         # cv2.putText(frame, "angle " + str(angle), (50, 100), font, 1, (255, 0, 0), 2)
         # cv2.putText(frame, str(self.lpos) + ", " + str(self.rpos), (50, 440), font, 1, (255, 0, 0), 2)
-        cv2.putText(frame, "state " + str(self.state), (440, 50), font, 1, (255, 0, 0), 2)
+        cv2.putText(frame, "state " + str(self.state), (440, 50), self.font, 1, (255, 0, 0), 2)
         cv2.imshow('frame', frame)
-
-        if cv2.waitKey(10) == 27:
-            self.out.release()
-            exit()
 
     def callback_itrpt(self, msg):
         class_id = msg.bounding_boxes[0].id
         print(class_id)
         if class_id == 0:
-            self.cmd_idx = 1
-        elif class_id == 1:
-            self.cmd_idx = 2
-        elif class_id != 5:
+            self.turn_signal = 0
+            self.ready2turn = True
             self.cmd_idx = 0
-        self.busy_count = 10
+        elif class_id == 1:
+            self.turn_signal = 1
+            self.ready2turn = True
+            self.cmd_idx = 1
+        # elif class_id != 5:
+        #     self.cmd_idx = 2
+        #     self.turn_signal = None
 
-    
-        #print(msg)
-        # self.cmd_idx = int(msg)
-        # self.busy_count = 5*self.fps
+        # self.busy_count = 10
+
 
     def draw_lines(self, img, lines):
         for line in lines:
@@ -292,4 +278,17 @@ class HoughLiner(Liner):
                      (255, 0, 0), 3)
 
         return img, pos + self.width_offset
+
+    def force_turn(self):
+        self.force_turn_count = 20
+        self.ready2turn = False
+
+        if self.turn_signal == 0:
+            pass
+        elif self.turn_signal == 1:
+            pass
+        else:
+            raise Exception("self.turn_signal cannot be None")
+
+        
 

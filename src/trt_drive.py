@@ -19,7 +19,7 @@ def right(cls):
     cls.controller.go(50)
 
 
-liner = HoughLiner("Hough_Liner", commands=[stop, left, right])
+liner = HoughLiner("Hough_Liner", commands=[left, right, stop])
 liner.run()
 
 
