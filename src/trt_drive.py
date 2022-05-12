@@ -2,21 +2,21 @@
 
 import rospy, serial, time
 from xycar_msgs.msg import xycar_motor
-from yolov3_trt.msg import BoundingBoxes, BoundingBox
 from Hough_liner import HoughLiner
 
 
 def stop(cls):
-    cls.controller.stop()
+    cls.controller.go(0)
     pass
 
 
 def left(cls):
+    cls.controller.go(-50)
     pass
 
 
 def right(cls):
-    pass
+    cls.controller.go(50)
 
 
 liner = HoughLiner("Hough_Liner", commands=[stop, left, right])

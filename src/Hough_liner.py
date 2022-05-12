@@ -86,7 +86,7 @@ class HoughLiner(Liner):
                         angle = self.c_pid.pid_control(error) * 1
 
             self.prev_angle = angle
-            self.controller.stop(angle)
+            self.controller.go(-50)
             # print("lpos: {}, rpos: {}".format(self.lpos, self.rpos))
         else:
             self.out.release()
@@ -102,8 +102,9 @@ class HoughLiner(Liner):
             exit()
 
     def callback_itrpt(self, msg):
-        self.cmd_idx = int(msg)
-        self.busy_count = 5*self.fps
+        print(msg)
+        # self.cmd_idx = int(msg)
+        # self.busy_count = 5*self.fps
 
     def draw_lines(self, img, lines):
         for line in lines:

@@ -6,7 +6,6 @@ from xycar_msgs.msg import xycar_motor
 
 class egoController:
     def __init__(self):
-        rospy.init_node('ego_controller')
         self.pub = rospy.Publisher('xycar_motor', xycar_motor)
 
     def stop(self):
@@ -17,6 +16,6 @@ class egoController:
 
     def go(self, angle):
         msg = xycar_motor()
-        msg.speed = 5
+        msg.speed = 0
         msg.angle = angle
         self.pub.publish(msg)

@@ -2,7 +2,7 @@ import time
 from abc import abstractmethod
 import rospy
 from sensor_msgs.msg import Image
-from yolov3_trt.msg import BoundingBox, BoundingBoxes
+from yolov3_trt_ros.msg import BoundingBox, BoundingBoxes
 from cv_bridge import CvBridge
 
 from PID import PID
@@ -10,18 +10,18 @@ from ego_controller import egoController
 
 
 class Liner:
-    def __init__(self, node_name, pid, commands=None):
+    def __init__(self, node_name, commands=None):
         rospy.init_node(node_name)
         self.sub = rospy.Subscriber('/usb_cam/image_raw',
                                     Image, self.callback, queue_size=1)
         if commands:
-            self.sub_itrpt = rospy.Subscriber('something', BoundingBoxes, self.callback_itrpt, queue_size=1)
+            self.sub_itrpt = rospy.Subscriber('/yolov3_trt_ros/detections', BoundingBoxes, self.callback_itrpt, queue_size=1)
             self.commands = commands    # functions
 
         self.bridge = CvBridge()
-        self.pid = pid
+        self.pid = PID(0.5, 0.0005, 0.00005)
         self.controller = egoController()
-        self.controller.steer(0)
+        self.controller.stop()
         time.sleep(3)
 
     def imgmsg2numpy(self, msg):

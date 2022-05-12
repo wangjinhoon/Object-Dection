@@ -57,7 +57,7 @@ from PIL import Image,ImageDraw
 import rospy
 
 from std_msgs.msg import String
-from yolov3_trt.msg import BoundingBox, BoundingBoxes
+from yolov3_trt_ros.msg import BoundingBox, BoundingBoxes
 
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image as Imageros
@@ -67,10 +67,9 @@ import common
 
 TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
 
-CFG = "/home/nvidia/xycar_ws/src/yolov3_trt_ros/src/yolov3-tiny_tstl352.cfg"
-TRT = '/home/nvidia/xycar_ws/src/yolov3_trt_ros/src/yolov3-tiny_tstl352_best_final.trt'
+CFG = "/home/nvidia/xycar_ws/src/5b/src/yolov3-tiny_tstl_416.cfg"
+TRT = '/home/nvidia/xycar_ws/src/5b/src/model1000_epoch2850.trt'
 NUM_CLASS = 6
-INPUT_IMG = '/home/nvidia/xycar_ws/src/yolov3_trt_ros/src/video1_2.png'
 
 bridge = CvBridge()
 xycar_image = np.empty(shape=[0])
