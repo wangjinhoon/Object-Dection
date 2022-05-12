@@ -166,15 +166,27 @@ class HoughLiner(Liner):
             self.out.release()
             exit()
 
+    # xmin
+    # ymin
+    # xmax
+    # ymax
+
     def callback_itrpt(self, msg):
         class_id = msg.bounding_boxes[0].id
-        print(class_id)
-        if class_id == 0:
-            self.cmd_idx = 1
-        elif class_id == 1:
-            self.cmd_idx = 2
-        elif class_id != 5:
-            self.cmd_idx = 0
+        top, right, bottom, left = msg.bounding_boxes[0].ymin, msg.bounding_boxes[0].ymax,msg.bounding_boxes[0].xmin,msg.bounding_boxes[0].xmax
+        hh = bottom-top
+        ww = right-left
+        s = hh*ww
+        print("넓이 : ",s, ", class_id : ",class_id)
+
+        # if class_id == 0 and s > 100: #left
+        #     self.cmd_idx = 1
+        # elif class_id == 1 and s > 100: #right
+        #     self.cmd_idx = 2
+        # elif class_id != 5 and s > 100: # stop_sign
+        #     self.cmd_idx = 0
+        # elif class_id == 5:
+        #     self.cmd_idx = 0
         self.busy_count = 10
 
     
