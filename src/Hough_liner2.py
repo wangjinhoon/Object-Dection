@@ -19,16 +19,14 @@ class HoughLiner(Liner):
     prev_rpos = None
     alpha = 0.5
     state = 0
-    
+    change_count = 10
 
     def callback(self, msg):
         if self.busy_count:
             self.busy_count -= 1
-            assert self.cmd_idx is not None, "command index cannot be None!"
+            assert self.cmd_idx, "command index cannot be None!"
             self.commands[self.cmd_idx](self)
             return
-        else:
-            cmd_idx = None
 
         font = cv2.FONT_HERSHEY_SIMPLEX    
 
@@ -106,6 +104,7 @@ class HoughLiner(Liner):
 
 #                     self.prev_rpos = self.width - self.width_offset
 
+
             if self.lpos == self.width_offset:
                 if self.rpos > self.width * 0.7:
                     angle = 0
@@ -126,7 +125,11 @@ class HoughLiner(Liner):
                         angle = 40
                         self.state = 2
             else:
-                self.state = 0
+                if self.change_count == 0:
+                    self.state = 0
+                    self.change_count = 10
+                else:
+                    self.change_count -= 1
                 center = (self.lpos + self.rpos) / 2
                 error = (center - self.width / 2)
                 if abs(self.lpos - self.rpos) < 135 or self.rpos < self.lpos:
@@ -155,8 +158,7 @@ class HoughLiner(Liner):
 
         self.controller.go(angle)
            # exit()
-        self.prev_lpos = self.lpos
-        self.prev_rpos = self.rpos
+
         # cv2.putText(frame, "angle " + str(angle), (50, 100), font, 1, (255, 0, 0), 2)
         # cv2.putText(frame, str(self.lpos) + ", " + str(self.rpos), (50, 440), font, 1, (255, 0, 0), 2)
         cv2.putText(frame, "state " + str(self.state), (440, 50), font, 1, (255, 0, 0), 2)
@@ -167,17 +169,7 @@ class HoughLiner(Liner):
             exit()
 
     def callback_itrpt(self, msg):
-        class_id = msg.bounding_boxes[0].id
-        print(class_id)
-        if class_id == 0:
-            self.cmd_idx = 1
-        elif class_id == 1:
-            self.cmd_idx = 2
-        elif class_id != 5:
-            self.cmd_idx = 0
-        self.busy_count = 10
-
-    
+        pass
         #print(msg)
         # self.cmd_idx = int(msg)
         # self.busy_count = 5*self.fps

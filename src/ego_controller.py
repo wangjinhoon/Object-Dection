@@ -16,6 +16,6 @@ class egoController:
 
     def go(self, angle):
         msg = xycar_motor()
-        msg.speed = 5
+        msg.speed = 0
         msg.angle = angle
         self.pub.publish(msg)
