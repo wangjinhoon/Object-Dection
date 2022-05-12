@@ -42,8 +42,8 @@ class HoughLiner(Liner):
 
         gray = gray + np.uint8(self.target_b - curr_b)
 
-        ret, gray = cv2.threshold(gray, 122, 255, cv2.THRESH_BINARY_INV)
-
+        ret, gray = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
+        
         edge = cv2.Canny(np.uint8(gray), low_thres, high_thres)
         roi = edge[self.offset:self.offset + self.gap, 0 + self.width_offset:self.width - self.width_offset]
 
@@ -59,43 +59,43 @@ class HoughLiner(Liner):
             frame = self.draw_rectangle(frame)
 
             if self.lpos == self.width_offset:
-                if self.rpos > self.width * 0.70:
+                if self.rpos > self.width * 0.5:
                     angle = 0
                 else:
-                    angle = -50
+                    angle = -40
             elif self.rpos == self.width - self.width_offset:
-                if self.lpos < self.width * 0.30:
+                if self.lpos < self.width * 0.5:
                     angle = 0
                 else:
-                    angle = 50
+                    angle = 40
             else:
                 center = (self.lpos + self.rpos) / 2
                 error = (center - self.width / 2)
                 if abs(self.lpos - self.rpos) < 135 or self.rpos < self.lpos:
                     if self.prev_angle > 0:
-                        angle = 50
+                        angle = 40
                     elif self.prev_angle < 0:
-                        angle = -50
+                        angle = -40
                     else:
                         angle = 0
                 else:
                     print(error)
-                    if error < 100:
-                        angle = self.s_pid.pid_control(error) * 1
-                    else:
-                        angle = self.c_pid.pid_control(error) * 1
-
+                    
+                    angle = self.pid.pid_control(error) * 1
+                
+                       
             self.prev_angle = angle
-            self.controller.go(-50)
+            self.controller.go(angle)
             # print("lpos: {}, rpos: {}".format(self.lpos, self.rpos))
         else:
-            self.out.release()
-            exit()
+            self.controller.go(0)
+           # exit()
 
         font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(frame, "angle " + str(angle), (50, 100), font, 1, (255, 0, 0), 2)
-        cv2.putText(frame, str(self.lpos) + ", " + str(self.rpos), (50, 440), font, 1, (255, 0, 0), 2)
-        cv2.putText(frame, "mid " + str(mid), (440, 50), font, 1, (255, 0, 0), 2)
+        # cv2.putText(frame, "angle " + str(angle), (50, 100), font, 1, (255, 0, 0), 2)
+        # cv2.putText(frame, str(self.lpos) + ", " + str(self.rpos), (50, 440), font, 1, (255, 0, 0), 2)
+        # cv2.putText(frame, "mid " + str(mid), (440, 50), font, 1, (255, 0, 0), 2)
+        cv2.imshow('frame', frame)
 
         if cv2.waitKey(10) == 27:
             self.out.release()
