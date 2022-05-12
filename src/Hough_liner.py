@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
 from pickle import FALSE
+from selectors import EpollSelector
 import rospy, random, cv2, math
 import numpy as np
 from collections import deque
+from yolov3_trt_ros.msg import BoundingBox, BoundingBoxes
 
 from liner import Liner
 
@@ -12,28 +14,30 @@ class HoughLiner(Liner):
 
     fps = 15.0    
     target_b = 128
+
     prev_angles = deque()
     q_len = 10
     straight_thres = 10
     pos_differ_thres = 400
-    busy_count = 0
     
-
-    cmd_idx = None
     turn_signal= None
     ready2turn = False
     force_turn_count = 0
+    stop_count = 0
+    ignore_count = 0
 
     font = cv2.FONT_HERSHEY_SIMPLEX
 
+    def __init__(self, node_name):
+        super().__init__(node_name)
+        self.sub_itrpt = rospy.Subscriber('/yolov3_trt_ros/detections', BoundingBoxes, self.callback_itrpt, queue_size=1)
+
     def callback(self, msg):
-        # if self.busy_count:
-        #     self.busy_count -= 1
-        #     assert self.cmd_idx is not None, "command index cannot be None!"
-        #     self.commands[self.cmd_idx](self)
-        #     return
-        # else:
-        #     self.cmd_idx = None
+        if self.stop_count > 0:
+            self.stop_count -= 0
+            self.controller.stop()
+        elif self.ignore_count > 0:
+            self.ignore_count -= 1
 
         if self.force_turn_count > 0:
             self.force_turn_count -= 1
@@ -120,7 +124,7 @@ class HoughLiner(Liner):
             # push current angle
             self.prev_angles.append(angle)
 
-
+            # If xycar plan to turn left or right soon
             if self.ready2turn:
                 if self.lpos != self.width_offset and self.rpos != self.width - self.width_offset and self.rpos - self.lpos > self.pos_differ_thres:
                     self.force_turn()
@@ -151,19 +155,29 @@ class HoughLiner(Liner):
         cv2.imshow('frame', frame)
 
     def callback_itrpt(self, msg):
+        if self.ignore_count > 0:
+            return
+
         class_id = msg.bounding_boxes[0].id
         print(class_id)
         if class_id == 0:
             self.turn_signal = 0
             self.ready2turn = True
-            self.cmd_idx = 0
         elif class_id == 1:
             self.turn_signal = 1
             self.ready2turn = True
-            self.cmd_idx = 1
-        # elif class_id != 5:
-        #     self.cmd_idx = 2
-        #     self.turn_signal = None
+        # stop immediately 5sec when stop, crosswalk, uturn sign detected 
+        elif class_id != 5:
+            self.stop_5sec()
+            self.turn_signal = None
+        else:
+            #class_id = 5
+            # TODO : detect color of traffic light
+            is_green_light = False
+            if is_green_light:
+                self.go_now()
+            else:
+                self.stop_5sec()
 
         # self.busy_count = 10
 
@@ -290,5 +304,11 @@ class HoughLiner(Liner):
         else:
             raise Exception("self.turn_signal cannot be None")
 
-        
+    def stop_5sec(self):
+        self.stop_count = 5*self.fps
+        # ignore msg from detector
+        self.ignore_count = 5*self.fps
 
+    def go_now(self):
+        self.stop_count = 0
+        #self.ignore_count = 0

@@ -5,21 +5,21 @@ from xycar_msgs.msg import xycar_motor
 from Hough_liner import HoughLiner
 
 
-def stop(cls):
-    cls.controller.go(0)
-    pass
+# def stop(cls):
+#     cls.controller.go(0)
+#     pass
 
 
-def left(cls):
-    cls.controller.go(-50)
-    pass
+# def left(cls):
+#     cls.controller.go(-50)
+#     pass
 
 
-def right(cls):
-    cls.controller.go(50)
+# def right(cls):
+#     cls.controller.go(50)
 
 
-liner = HoughLiner("Hough_Liner", commands=[left, right, stop])
+liner = HoughLiner("Hough_Liner", inturrput=True)
 liner.run()
 
 
