@@ -173,7 +173,7 @@ class HoughLiner(Liner):
 
     def callback_itrpt(self, msg):
         class_id = msg.bounding_boxes[0].id
-        top, right, bottom, left = msg.bounding_boxes[0].ymin, msg.bounding_boxes[0].ymax,msg.bounding_boxes[0].xmin,msg.bounding_boxes[0].xmax
+        top, right, bottom, left = msg.bounding_boxes[0].ymin, msg.bounding_boxes[0].xmin,msg.bounding_boxes[0].ymax,msg.bounding_boxes[0].xmax
         hh = bottom-top
         ww = right-left
         s = hh*ww
