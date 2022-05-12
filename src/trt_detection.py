@@ -167,8 +167,8 @@ class yolov3_trt(object):
             minx, miny, width, height = box
             detection_msg = BoundingBox()
             detection_msg.xmin = int(minx)
-            detection_msg.xmax = int(miny)
-            detection_msg.ymin = int(minx + width)
+            detection_msg.xmax = int(minx + width) 
+            detection_msg.ymin = int(miny)
             detection_msg.ymax = int(miny + height)
             detection_msg.probability = score
             detection_msg.id = int(category)
