@@ -16,9 +16,9 @@ class HoughLiner(Liner):
     start = False
 
     prev_angles = deque([0])
-    q_len = 20
+    q_len = 15
     straight_thres = 10
-    pos_differ_thres = 530
+    pos_differ_thres = 550
     
     turn_signal= None
     ready2turn = False
@@ -51,9 +51,10 @@ class HoughLiner(Liner):
             self.ignore_count -= 1
 
         if self.force_turn_count > 0:
+            print("force_turn")
             self.force_turn_count -= 1
             if self.turn_signal == 0:
-                self.controller.go(-40)
+                self.controller.go(-35)
             else:
                 self.controller.go(40)
             return
@@ -175,37 +176,52 @@ class HoughLiner(Liner):
         if self.ignore_count > 0 or len(msg.bounding_boxes) == 0:
             return
 
-        class_id = msg.bounding_boxes[0].id
-        print("class_id", class_id)
-        if class_id == 0:
+        max_size = 0
+        max_class = -1
+
+        for bounding_box in msg.bounding_boxes:
+            class_id = bounding_box.id
+            xmin, ymin, xmax, ymax = bounding_box.xmin, bounding_box.ymin, bounding_box.xmax, bounding_box.ymax
+            size = self.get_size(xmin, ymin, xmax, ymax)
+            if size > max_size:
+                max_size = size
+                max_class = class_id
+
+        if (max_class == 0 or max_class == 1) and size < 3200:
+            return
+        elif max_class in [5, 6, 7] and size < 7000:
+            return
+        elif max_class in [2, 3, 4] and size < 4000:
+            return
+
+        print("class_id", max_class)
+
+        if max_class == 0:
+            if self.turn_signal is not None:
+                return
             self.turn_signal = 0
             self.ready2turn = True
-        elif class_id == 1:
+        elif max_class == 1:
+            if self.turn_signal is not None:
+                return
             self.turn_signal = 1
             self.ready2turn = True
         # stop immediately 5sec when stop, crosswalk, uturn sign detected 
-        elif class_id == 2 or class_id == 3:
+        elif max_class == 2 or max_class == 3:
             self.stop_5sec()
-        elif class_id == 5:
-            self.stop()
-            self.turn_signal = None
-            print("red")
-        elif class_id == 6:
-            print("yello")
-        elif class_id == 7:
-            self.go_now()
-            self.force_go()
-            print("green")
-        else:
-            #class_id = 5
-            # TODO : detect color of traffic light
-            is_green_light = False
-            if is_green_light:
-                self.go_now()
-            else:
-                self.stop_5sec()
-
-        # self.busy_count = 10
+        elif max_class >= 5:
+            #self.force_turn_count = 0
+            if max_class == 5:
+                self.stop()
+                self.turn_signal = None
+                print("red")
+            elif max_class == 6:
+                print("yello")
+            elif max_class == 7:
+                if self.turn_signal == None:
+                    self.go_now()
+                    self.force_go()
+                print("green")
 
 
     def draw_lines(self, img, lines):
@@ -331,7 +347,7 @@ class HoughLiner(Liner):
             raise Exception("self.turn_signal cannot be None")
 
     def force_go(self):
-        self.force_go_count = 60
+        self.force_go_count = 40
 
     def stop_5sec(self):
         self.stop_count = 7*self.fps
@@ -344,3 +360,6 @@ class HoughLiner(Liner):
     def go_now(self):
         self.stop_count = 0
         #self.ignore_count = 0
+
+    def get_size(self, xmin, ymin, xmax, ymax):
+        return (xmax-xmin)*(ymax-ymin)

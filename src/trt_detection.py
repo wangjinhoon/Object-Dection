@@ -149,16 +149,16 @@ class yolov3_trt(object):
             maximum_name = -1
             maxscore = 0
             if boxes is not None:
-                for ((top, right, bottom, left), cls, score) in zip(boxes, classes, scores ):
-                    hh = bottom-top
-                    ww = right-left
-                    now = hh*ww
-                    if maximum_size < now:
-                        maximum_size = now
-                        maximum_name = cls
-                        maxscore = score
-                        t,r,b,l = top, right, bottom, left
-                #print(maximum_size)
+            #     for ((top, right, bottom, left), cls, score) in zip(boxes, classes, scores ):
+            #         hh = bottom-top
+            #         ww = right-left
+            #         now = hh*ww
+            #         if maximum_size < now:
+            #             maximum_size = now
+            #             maximum_name = cls
+            #             maxscore = score
+            #             t,r,b,l = top, right, bottom, left
+            #     #print(maximum_size)
             
                 # Traffic Light Classificiation
                 for i in range(len(boxes)):
@@ -176,41 +176,47 @@ class yolov3_trt(object):
                         #traffic_light_roi = traffic_light_gray[miny:height, minx:width] 
                         traffic_id = traffic_light(traffic_light_gray, boxes[i])
                         classes[i] = traffic_id
-                    
-                if maximum_name == 0 and maximum_size > 5000: #left
-                    maxbox.append(t)
-                    maxbox.append(r)
-                    maxbox.append(b)
-                    maxbox.append(l)
-                    self.publisher(maxbox, maxscore, maximum_name)
+                
+                # #boxes =  np.ndarray(maxbox)
+                # print(maximum_name)
+                # if maximum_name == 0 and maximum_size > 100: #left
+                #     maxbox.append(t)
+                #     maxbox.append(r)
+                #     maxbox.append(b)
+                #     maxbox.append(l)
+                #     print("publish")
+                #     self.publisher(maxbox, maxscore, maximum_name)
 
-                elif maximum_name == 1 and maximum_size > 5000: #right
-                    maxbox.append(t)
-                    maxbox.append(r)
-                    maxbox.append(b)
-                    maxbox.append(l)
-                    self.publisher(maxbox, maxscore, maximum_name)
+                # elif maximum_name == 1 and maximum_size > 100: #right
+                #     maxbox.append(t)
+                #     maxbox.append(r)
+                #     maxbox.append(b)
+                #     maxbox.append(l)
+                #     print("publish")
+                #     self.publisher(maxbox, maxscore, maximum_name)
 
-                elif maximum_name != 5 and maximum_size > 6400: #stop
-                    maxbox.append(t)
-                    maxbox.append(r)
-                    maxbox.append(b)
-                    maxbox.append(l)
-                    self.stop_recognition = True
-                    self.publisher(maxbox, maxscore, maximum_name)
+                # elif maximum_name != 5 and maximum_size > 100: #stop
+                #     maxbox.append(t)
+                #     maxbox.append(r)
+                #     maxbox.append(b)
+                #     maxbox.append(l)
+                #     self.stop_recognition = True
+                #     print("publish")
+                #     self.publisher(maxbox, maxscore, maximum_name)
 
-                elif maximum_name == 5 and maximum_size > 15000: #light
-                    maxbox.append(t)
-                    maxbox.append(r)
-                    maxbox.append(b)
-                    maxbox.append(l)
-                    self.publisher(maxbox, maxscore, maximum_name)
+                # elif maximum_name == 5 and maximum_size > 100: #light
+                #     maxbox.append(t)
+                #     maxbox.append(r)
+                #     maxbox.append(b)
+                #     maxbox.append(l)
+                #     print("publish")
+                #     self.publisher(maxbox, maxscore, maximum_name)
 
             latency = time.time() - start_time
             fps = 1 / latency
 
             #publish detected objects boxes and classes
-            #self.publisher(boxes, scores, classes)
+            self.publisher(boxes, scores, classes)
 
             # Draw the bounding boxes onto the original input image and save it as a PNG file
             # print(boxes, classes, scores)

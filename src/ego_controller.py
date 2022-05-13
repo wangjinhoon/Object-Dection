@@ -9,14 +9,14 @@ class egoController:
         self.pub = rospy.Publisher('xycar_motor', xycar_motor)
 
     def stop(self):
-        print("stop")
+        # print("stop")
         msg = xycar_motor()
         msg.speed = 0
         msg.angle = 0
         self.pub.publish(msg)
 
     def go(self, angle):
-        print("go")
+        # print("go")
         msg = xycar_motor()
         msg.speed = 5
         msg.angle = angle
