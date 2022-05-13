@@ -107,7 +107,7 @@ class yolov3_trt(object):
         self.engine = get_engine(self.engine_file_path)
 
         self.context = self.engine.create_execution_context()
-        
+
         self.detection_pub = rospy.Publisher('/yolov3_trt_ros/detections', BoundingBoxes, queue_size=1)
 
     def detect(self):
@@ -119,11 +119,11 @@ class yolov3_trt(object):
             # Do inference with TensorRT
 
             inputs, outputs, bindings, stream = common.allocate_buffers(self.engine)
-            
+
             # if xycar_image is empty, skip inference
             if xycar_image.shape[0] == 0:
                 continue
-            
+
             if self.show_img:
                 cv2.imshow("show_trt",xycar_image)
                 cv2.waitKey(1)
@@ -156,38 +156,36 @@ class yolov3_trt(object):
                     maxscore = score
                     t,r,b,l = top, right, bottom, left
             print(maximum_size)
-            if  self.stop_recognition:
-                if maximum_name == -1:
-                    self.stop_recognition = False
-            else:       
-                if maximum_name == 0 and maximum_size > 100: #left
-                    maxbox.append(t)
-                    maxbox.append(r)
-                    maxbox.append(b)
-                    maxbox.append(l)
-                    self.publisher(maxbox, maxscore, maximum_name)
 
-                elif maximum_name == 1 and maximum_size > 100: #right
-                    maxbox.append(t)
-                    maxbox.append(r)
-                    maxbox.append(b)
-                    maxbox.append(l)
-                    self.publisher(maxbox, maxscore, maximum_name)
 
-                elif maximum_name != 5 and maximum_size > 100: #stop
-                    maxbox.append(t)
-                    maxbox.append(r)
-                    maxbox.append(b)
-                    maxbox.append(l)
-                    self.stop_recognition = True
-                    self.publisher(maxbox, maxscore, maximum_name)
+            if maximum_name == 0 and maximum_size > 100: #left
+                maxbox.append(t)
+                maxbox.append(r)
+                maxbox.append(b)
+                maxbox.append(l)
+                self.publisher(maxbox, maxscore, maximum_name)
 
-                elif maximum_name == 5 and maximum_size > 100: #light
-                    maxbox.append(t)
-                    maxbox.append(r)
-                    maxbox.append(b)
-                    maxbox.append(l)
-                    self.publisher(maxbox, maxscore, maximum_name)
+            elif maximum_name == 1 and maximum_size > 100: #right
+                maxbox.append(t)
+                maxbox.append(r)
+                maxbox.append(b)
+                maxbox.append(l)
+                self.publisher(maxbox, maxscore, maximum_name)
+
+            elif maximum_name != 5 and maximum_size > 100: #stop
+                maxbox.append(t)
+                maxbox.append(r)
+                maxbox.append(b)
+                maxbox.append(l)
+                self.stop_recognition = True
+                self.publisher(maxbox, maxscore, maximum_name)
+
+            elif maximum_name == 5 and maximum_size > 100: #light
+                maxbox.append(t)
+                maxbox.append(r)
+                maxbox.append(b)
+                maxbox.append(l)
+                self.publisher(maxbox, maxscore, maximum_name)
 
 
             latency = time.time() - start_time
@@ -303,4 +301,3 @@ if __name__ == '__main__':
     yolo = yolov3_trt()
     rospy.init_node('yolov3_trt_ros', anonymous=True)
     yolo.detect()
-
