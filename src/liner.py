@@ -19,7 +19,7 @@ class Liner:
         self.pid = PID(0.5, 0.0005, 0.00005)
         self.controller = egoController()
         self.controller.stop()
-        time.sleep(3)
+        time.sleep(5)
 
     def imgmsg2numpy(self, msg):
         return self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')

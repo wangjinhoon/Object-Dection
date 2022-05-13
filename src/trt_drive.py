@@ -19,7 +19,7 @@ from Hough_liner import HoughLiner
 #     cls.controller.go(50)
 
 
-liner = HoughLiner("Hough_Liner", inturrput=True)
+liner = HoughLiner("Hough_Liner")
 liner.run()
 
 
