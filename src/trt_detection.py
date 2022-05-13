@@ -68,7 +68,7 @@ import common
 TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
 
 CFG = "/home/nvidia/xycar_ws/src/5b/src/yolov3-tiny_tstl_416.cfg"
-TRT = '/home/nvidia/xycar_ws/src/5b/src/model_1400_416_epoch2900.trt'
+TRT = '/home/nvidia/xycar_ws/src/5b/src/model_416_2400_epoch2450.trt'
 NUM_CLASS = 6
 
 bridge = CvBridge()
