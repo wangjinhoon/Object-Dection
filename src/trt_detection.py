@@ -65,6 +65,8 @@ from sensor_msgs.msg import Image as Imageros
 from data_processing import PreprocessYOLO, PostprocessYOLO, ALL_CATEGORIES
 import common
 
+from traffic_light import *
+
 TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
 
 CFG = "/home/nvidia/xycar_ws/src/5b/src/yolov3-tiny_tstl_416.cfg"
@@ -137,9 +139,27 @@ class yolov3_trt(object):
 
             # Before doing post-processing, we need to reshape the outputs as the common.do_inference will give us flat arrays.
             trt_outputs = [output.reshape(shape) for output, shape in zip(trt_outputs, self.output_shapes)]
-
             # Run the post-processing algorithms on the TensorRT outputs and get the bounding box details of detected objects
             boxes, classes, scores = self.postprocessor.process(trt_outputs, shape_orig_WH)
+
+            # Traffic Light Classificiation
+            if boxes is not None:
+                traffic_roi = None
+                for i, (box, category) in enumerate(zip(boxes, classes)):
+                    if int(category) == 5:
+                        # Get image
+                        #img = np.array(np.transpose(image[0], (1,2,0)) * 255, dtype=np.uint8)
+                        #rgb_img = np.array(Image.fromarray(img))
+                        traffic_light_gray = cv2.cvtColor(xycar_image, cv2.COLOR_BGR2GRAY)
+
+                        # Get Traffic Light Bounding box
+                        minx, miny, width, height = box
+
+                        # Traffic Light ROI
+                        traffic_light_roi = traffic_light_gray[miny:height, minx:width] 
+                        traffic_id = traffic_light(traffic_light_gray, box)
+                        classes[i] = traffic_id
+
 
             latency = time.time() - start_time
             fps = 1 / latency
@@ -152,7 +172,7 @@ class yolov3_trt(object):
             if self.show_img:
                 img_show = np.array(np.transpose(image[0], (1,2,0)) * 255, dtype=np.uint8)
                 obj_detected_img = draw_bboxes(Image.fromarray(img_show), boxes, scores, classes, ALL_CATEGORIES)
-                obj_detected_img_np = np.array(obj_detected_img)
+                obj_detected_img_np = np.array(obj_detected_img)    
                 show_img = cv2.cvtColor(obj_detected_img_np, cv2.COLOR_RGB2BGR)
                 cv2.putText(show_img, "FPS:"+str(int(fps)), (10,50),cv2.FONT_HERSHEY_SIMPLEX, 1,(0,255,0),2,1)
                 cv2.imshow("result",show_img)
