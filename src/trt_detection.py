@@ -158,21 +158,21 @@ class yolov3_trt(object):
             print(maximum_size)
 
 
-            if maximum_name == 0 and maximum_size > 100: #left
+            if maximum_name == 0 and maximum_size > 5000: #left
                 maxbox.append(t)
                 maxbox.append(r)
                 maxbox.append(b)
                 maxbox.append(l)
                 self.publisher(maxbox, maxscore, maximum_name)
 
-            elif maximum_name == 1 and maximum_size > 100: #right
+            elif maximum_name == 1 and maximum_size > 5000: #right
                 maxbox.append(t)
                 maxbox.append(r)
                 maxbox.append(b)
                 maxbox.append(l)
                 self.publisher(maxbox, maxscore, maximum_name)
 
-            elif maximum_name != 5 and maximum_size > 100: #stop
+            elif maximum_name != 5 and maximum_size > 6400: #stop
                 maxbox.append(t)
                 maxbox.append(r)
                 maxbox.append(b)
@@ -180,7 +180,7 @@ class yolov3_trt(object):
                 self.stop_recognition = True
                 self.publisher(maxbox, maxscore, maximum_name)
 
-            elif maximum_name == 5 and maximum_size > 100: #light
+            elif maximum_name == 5 and maximum_size > 15000: #light
                 maxbox.append(t)
                 maxbox.append(r)
                 maxbox.append(b)
