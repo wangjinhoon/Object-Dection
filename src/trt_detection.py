@@ -141,6 +141,21 @@ class yolov3_trt(object):
             # Run the post-processing algorithms on the TensorRT outputs and get the bounding box details of detected objects
             boxes, classes, scores = self.postprocessor.process(trt_outputs, shape_orig_WH)
 
+            maximum_size = 0
+            maxbox = []
+            maximum_name = -1
+            maxscore = 0
+            for ((top, right, bottom, left), cls, score) in zip(boxes, classes, scores ):
+                hh = bottom-top
+                ww = right-left
+                now = hh*ww
+                if maximum_size < now:
+                    maximum_size = now
+                    maximum_name = cls
+                    maxscore = score
+                    t,r,b,l = top, right, bottom, left
+            print(maximum_size)
+            
             latency = time.time() - start_time
             fps = 1 / latency
 
