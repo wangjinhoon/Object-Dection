@@ -23,6 +23,7 @@ class HoughLiner(Liner):
     turn_signal= None
     ready2turn = False
     force_turn_count = 0
+    force_go_count = 0
     stop_count = 0
     ignore_count = 0
 
@@ -36,6 +37,11 @@ class HoughLiner(Liner):
         if self.start == False:
             return
 
+        if self.force_go_count > 0:
+            print("force go")
+            self.force_go_count -= 1
+            self.controller.go(0)
+            return
         if self.stop_count > 0:
             print("stop_count:", self.stop_count)
             self.stop_count -= 1
@@ -140,7 +146,7 @@ class HoughLiner(Liner):
                 # check straight
                 avg_angle = abs(sum(self.prev_angles)/self.q_len)
                 if avg_angle < self.straight_thres:
-                    print("straight_________________________")
+                    #print("straight_________________________")
                     self.turn_signal = None
 
             # print("lpos: {}, rpos: {}".format(self.lpos, self.rpos))
@@ -170,7 +176,7 @@ class HoughLiner(Liner):
             return
 
         class_id = msg.bounding_boxes[0].id
-        print(class_id)
+        print("class_id", class_id)
         if class_id == 0:
             self.turn_signal = 0
             self.ready2turn = True
@@ -181,8 +187,15 @@ class HoughLiner(Liner):
         elif class_id == 2 or class_id == 3:
             self.stop_5sec()
         elif class_id == 5:
-            self.stop_5sec()
+            self.stop()
             self.turn_signal = None
+            print("red")
+        elif class_id == 6:
+            print("yello")
+        elif class_id == 7:
+            self.go_now()
+            self.force_go()
+            print("green")
         else:
             #class_id = 5
             # TODO : detect color of traffic light
@@ -317,10 +330,16 @@ class HoughLiner(Liner):
         else:
             raise Exception("self.turn_signal cannot be None")
 
+    def force_go(self):
+        self.force_go_count = 60
+
     def stop_5sec(self):
         self.stop_count = 7*self.fps
         # ignore msg from detector
         self.ignore_count = 7*self.fps
+
+    def stop(self):
+        self.stop_count = 7*self.fps
 
     def go_now(self):
         self.stop_count = 0

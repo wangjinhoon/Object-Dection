@@ -65,6 +65,8 @@ from sensor_msgs.msg import Image as Imageros
 from data_processing import PreprocessYOLO, PostprocessYOLO, ALL_CATEGORIES
 import common
 
+from traffic_light import *
+
 TRT_LOGGER = trt.Logger(trt.Logger.WARNING)
 
 CFG = "/home/nvidia/xycar_ws/src/5b/src/yolov3-tiny_tstl_416.cfg"
@@ -137,37 +139,85 @@ class yolov3_trt(object):
 
             # Before doing post-processing, we need to reshape the outputs as the common.do_inference will give us flat arrays.
             trt_outputs = [output.reshape(shape) for output, shape in zip(trt_outputs, self.output_shapes)]
-
             # Run the post-processing algorithms on the TensorRT outputs and get the bounding box details of detected objects
             boxes, classes, scores = self.postprocessor.process(trt_outputs, shape_orig_WH)
-
+    
+            # print("classes", type(classes), classes)
+            # exit()
             maximum_size = 0
             maxbox = []
             maximum_name = -1
             maxscore = 0
-            for ((top, right, bottom, left), cls, score) in zip(boxes, classes, scores ):
-                hh = bottom-top
-                ww = right-left
-                now = hh*ww
-                if maximum_size < now:
-                    maximum_size = now
-                    maximum_name = cls
-                    maxscore = score
-                    t,r,b,l = top, right, bottom, left
-            print(maximum_size)
+            if boxes is not None:
+                for ((top, right, bottom, left), cls, score) in zip(boxes, classes, scores ):
+                    hh = bottom-top
+                    ww = right-left
+                    now = hh*ww
+                    if maximum_size < now:
+                        maximum_size = now
+                        maximum_name = cls
+                        maxscore = score
+                        t,r,b,l = top, right, bottom, left
+                #print(maximum_size)
             
+                # Traffic Light Classificiation
+                for i in range(len(boxes)):
+                    if classes[i] and int(classes[i]) == 5:
+                        # Get image
+                        #img = np.array(np.transpose(image[0], (1,2,0)) * 255, dtype=np.uint8)
+                        #rgb_img = np.array(Image.fromarray(img))
+                        traffic_light_gray = cv2.cvtColor(xycar_image, cv2.COLOR_BGR2GRAY)
+                        # 640 x 480 -> 416 x 416
+
+                        # Get Traffic Light Bounding box
+                        #minx, miny, width, height = box
+
+                        # Traffic Light ROI
+                        #traffic_light_roi = traffic_light_gray[miny:height, minx:width] 
+                        traffic_id = traffic_light(traffic_light_gray, boxes[i])
+                        classes[i] = traffic_id
+                    
+                if maximum_name == 0 and maximum_size > 5000: #left
+                    maxbox.append(t)
+                    maxbox.append(r)
+                    maxbox.append(b)
+                    maxbox.append(l)
+                    self.publisher(maxbox, maxscore, maximum_name)
+
+                elif maximum_name == 1 and maximum_size > 5000: #right
+                    maxbox.append(t)
+                    maxbox.append(r)
+                    maxbox.append(b)
+                    maxbox.append(l)
+                    self.publisher(maxbox, maxscore, maximum_name)
+
+                elif maximum_name != 5 and maximum_size > 6400: #stop
+                    maxbox.append(t)
+                    maxbox.append(r)
+                    maxbox.append(b)
+                    maxbox.append(l)
+                    self.stop_recognition = True
+                    self.publisher(maxbox, maxscore, maximum_name)
+
+                elif maximum_name == 5 and maximum_size > 15000: #light
+                    maxbox.append(t)
+                    maxbox.append(r)
+                    maxbox.append(b)
+                    maxbox.append(l)
+                    self.publisher(maxbox, maxscore, maximum_name)
+
             latency = time.time() - start_time
             fps = 1 / latency
 
             #publish detected objects boxes and classes
-            self.publisher(boxes, scores, classes)
+            #self.publisher(boxes, scores, classes)
 
             # Draw the bounding boxes onto the original input image and save it as a PNG file
             # print(boxes, classes, scores)
             if self.show_img:
                 img_show = np.array(np.transpose(image[0], (1,2,0)) * 255, dtype=np.uint8)
                 obj_detected_img = draw_bboxes(Image.fromarray(img_show), boxes, scores, classes, ALL_CATEGORIES)
-                obj_detected_img_np = np.array(obj_detected_img)
+                obj_detected_img_np = np.array(obj_detected_img)    
                 show_img = cv2.cvtColor(obj_detected_img_np, cv2.COLOR_RGB2BGR)
                 cv2.putText(show_img, "FPS:"+str(int(fps)), (10,50),cv2.FONT_HERSHEY_SIMPLEX, 1,(0,255,0),2,1)
                 cv2.imshow("result",show_img)
@@ -240,6 +290,9 @@ def draw_bboxes(image_raw, bboxes, confidences, categories, all_categories, bbox
     the category name)
     bbox_color -- an optional string specifying the color of the bounding boxes (default: 'blue')
     """
+    all_categories.append('traffic_light')
+    all_categories.append('traffic_light')
+
     draw = ImageDraw.Draw(image_raw)
     if bboxes is None and confidences is None and categories is None:
         return image_raw
