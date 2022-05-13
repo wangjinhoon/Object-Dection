@@ -1,5 +1,10 @@
- - 명도차
- - 슬라이딩 윈도우
- - 허프변환
+# 신호등 구분
 
-label_img4 영상 자료 구글드라이브 : https://drive.google.com/file/d/1GJSaMQ9PXXg-dlr07UgBSO1kK3wtYb_Z/view?usp=sharing
+- traffic_light.py : 함수형식
+- traffic_light_test_cam.py : 카메라 테스트
+- traffic_light_test_jpg.py : 사진 테스트
+
+## 신호등 사진
+<img src="KakaoTalk_20220512_202218137.jpg">
+<img src="KakaoTalk_20220512_202218137_01.jpg">
+<img src="KakaoTalk_20220512_202218137_02.jpg">
