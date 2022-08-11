@@ -14,4 +14,4 @@
 <img src="https://user-images.githubusercontent.com/83506637/183899545-2cac8084-a47a-4ac6-be88-637ff390366c.jpg" width="400" height="400">
 
 
-[자세한 내용 Notion 링크]([https://tasteful-dianella-4f4.notion.site/610212687da24382809e5024f4667545](https://tasteful-dianella-4f4.notion.site/84534e9d15d24e48a07f104e1203b045))
+[자세한 내용 Notion 링크](https://tasteful-dianella-4f4.notion.site/84534e9d15d24e48a07f104e1203b045)
